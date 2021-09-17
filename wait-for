@@ -63,10 +63,14 @@ wait_for() {
   while :; do
     case "$PROTOCOL" in
       tcp) 
+        echo "Checking $HOST"
         nc -w 1 -z "$HOST" "$PORT" > /dev/null 2>&1
         ;;
       http)
-        wget --timeout=1 -q "$HOST" -O /dev/null > /dev/null 2>&1 
+        wget --timeout=1 -q "$HOST" -O /dev/null > /dev/null 2>&1
+        ;;
+      file)
+        [ -f "$HOST" ] > /dev/null 2>&1
         ;;
       *)
         echoerr "Unknown protocol '$PROTOCOL'"
@@ -98,7 +102,7 @@ wait_for() {
 
     sleep 1
   done
-  echo "Operation timed out" >&2
+  echo "Operation timed out checking for $PROTOCOL $HOST $PORT" >&2
   exit 1
 }
 
@@ -107,6 +111,11 @@ while :; do
     http://*|https://*)
     HOST="$1"
     PROTOCOL="http"
+    shift 1
+    ;;
+    file://*)
+    HOST="${1##file://}"
+    PROTOCOL="file"
     shift 1
     ;;
     *:* )
@@ -179,6 +188,11 @@ case "$PROTOCOL" in
       usage 2
     fi
   ;;
+  file)
+    if [ "$HOST" = "" ]; then
+      echoerr "Error: you need to provide a file path to test."
+      usage 2
+    fi
 esac
 
 wait_for "$@"
